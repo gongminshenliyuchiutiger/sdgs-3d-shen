@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>SDGs永續發展目標｜3D互動星雲球體展示系統</title>
+  <meta name="description" content="聯合國 17 項永續發展目標 (SDGs) 與 169 項細項指標 3D 互動球狀展示網站，支援手勢撥弄與響應式設計。" />
+
+  <!-- Google Fonts: Noto Sans TC & Orbitron -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet" />
+
+  <!-- Font Awesome 6 Free (全面使用 Font Awesome 圖示) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- 動態星空粒子背景 -->
+  <canvas id="starfield-canvas" aria-hidden="true"></canvas>
+
+  <!-- 極光氛圍光暈 -->
+  <div class="aurora-bg" aria-hidden="true">
+    <div class="aurora-blob aurora-1"></div>
+    <div class="aurora-blob aurora-2"></div>
+    <div class="aurora-blob aurora-3"></div>
+  </div>
+
+  <!-- 頂部固定容器 (導覽列 + 多選篩選列，RWD 自動堆疊不重疊) -->
+  <div class="top-header-shell">
+    <header class="top-bar">
+      <div class="brand">
+        <div class="brand-icon">
+          <i class="fa-solid fa-earth-americas fa-spin-pulse"></i>
+        </div>
+        <div class="brand-text">
+          <h1 id="site-title">SDGs3D互動星雲球體展示系統</h1>
+          <p class="subtitle" data-i18n="subtitle">2030 聯合國永續發展目標互動展示</p>
+        </div>
+      </div>
+
+      <div class="controls-wrapper">
+        <!-- 搜尋框 -->
+        <div class="search-box">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <input type="text" id="search-input" placeholder="搜尋目標或指標 (例: 氣候、13.1)..." aria-label="搜尋 SDGs 目標或指標" />
+          <button id="clear-search-btn" class="icon-only-btn hidden" title="清除搜尋" aria-label="清除搜尋">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <!-- 模式切換與球體控制按鈕 -->
+        <div class="control-buttons">
+          <button id="mode-goals-btn" class="ctrl-btn active" title="17 大永續目標模式">
+            <i class="fa-solid fa-cubes"></i>
+            <span data-i18n="modeGoals">17 大目標</span>
+          </button>
+          <button id="mode-targets-btn" class="ctrl-btn" title="169 項細項指標星雲模式">
+            <i class="fa-solid fa-atom"></i>
+            <span data-i18n="modeTargets">169 細項星雲</span>
+          </button>
+          <button id="toggle-rotate-btn" class="ctrl-btn icon-square active" title="切換自動旋轉 / Auto Spin" aria-label="切換自動旋轉">
+            <i class="fa-solid fa-rotate"></i>
+          </button>
+          <button id="lang-toggle-btn" class="ctrl-btn icon-square lang-btn" title="切換中英文 / Switch Language" aria-label="切換中英文">
+            <i class="fa-solid fa-language"></i>
+          </button>
+          <button id="theme-toggle-btn" class="ctrl-btn icon-square theme-btn" title="切換明暗模式 / Switch Theme" aria-label="切換明暗模式">
+            <i id="theme-toggle-icon" class="fa-solid fa-sun"></i>
+          </button>
+          <button id="zoom-in-btn" class="ctrl-btn icon-square" title="放大球體" aria-label="放大球體">
+            <i class="fa-solid fa-magnifying-glass-plus"></i>
+          </button>
+          <button id="zoom-out-btn" class="ctrl-btn icon-square" title="縮小球體" aria-label="縮小球體">
+            <i class="fa-solid fa-magnifying-glass-minus"></i>
+          </button>
+          <button id="reset-view-btn" class="ctrl-btn icon-square" title="重置視角" aria-label="重置視角">
+            <i class="fa-solid fa-compass"></i>
+          </button>
+          <button id="list-view-btn" class="ctrl-btn icon-square" title="開啟目標總覽清單" aria-label="開啟目標總覽清單">
+            <i class="fa-solid fa-table-cells"></i>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- 17 目標快速篩選列 (支援多選，完整換行顯示) -->
+    <nav id="goal-filter-bar" class="goal-filter-bar" aria-label="SDGs 目標多選篩選">
+      <button class="filter-chip active" data-goal="all">
+        <i class="fa-solid fa-layer-group"></i> <span data-i18n="filterAll">全部</span>
+      </button>
+      <!-- JS 動態產生 Goal 1~17 多選按鈕 -->
+    </nav>
+  </div>
+
+  <!-- 主 3D 球體舞台 -->
+  <main id="stage" class="stage" aria-label="3D 互動球體展示區">
+    <!-- 中心全息核心與軌道光環 -->
+    <div class="sphere-core-wrapper" aria-hidden="true">
+      <div class="core-glow"></div>
+      <div class="orbit-ring ring-1"></div>
+      <div class="orbit-ring ring-2"></div>
+      <div class="orbit-ring ring-3"></div>
+      <div class="core-emblem">
+        <i class="fa-solid fa-globe"></i>
+        <span>SDGs</span>
+      </div>
+    </div>
+
+    <!-- 3D 卡片容器 -->
+    <div id="sphere-container" class="sphere-container"></div>
+
+    <!-- 操作提示徽章 -->
+    <div id="interaction-hint" class="interaction-hint">
+      <i class="fa-solid fa-hand-pointer"></i>
+      <span data-i18n="hintText">拖曳撥弄 3D 球體・滾輪縮放・點擊圖卡查看指標</span>
+    </div>
+  </main>
+
+  <!-- 詳細資訊彈窗 (Modal) -->
+  <div id="detail-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-card">
+      <div class="modal-header" id="modal-header-bg">
+        <div class="modal-header-left">
+          <button type="button" id="modal-goal-zoom-btn" class="modal-thumb-zoom-btn" title="展開觀看大圖" aria-label="展開觀看目標大圖">
+            <img id="modal-goal-img" src="" alt="" class="modal-goal-thumb" />
+            <span class="thumb-zoom-badge"><i class="fa-solid fa-magnifying-glass-plus"></i></span>
+          </button>
+          <div>
+            <span id="modal-goal-badge" class="modal-goal-badge"></span>
+            <h2 id="modal-title"></h2>
+            <p id="modal-subtitle" class="modal-subtitle"></p>
+          </div>
+        </div>
+        <button id="modal-close-btn" class="modal-close-btn" aria-label="關閉視窗">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="modal-desc-box">
+          <div class="desc-box-header">
+            <h3><i class="fa-solid fa-circle-info"></i> <span data-i18n="coreVision">目標核心願景</span></h3>
+            <button type="button" id="copy-goal-btn" class="copy-action-btn" title="一鍵複製目標與全部細項內容">
+              <i class="fa-regular fa-copy"></i> <span data-i18n="copyAll">一鍵複製全部指標</span>
+            </button>
+          </div>
+          <p id="modal-description"></p>
+        </div>
+
+        <div class="modal-targets-section">
+          <div class="targets-header">
+            <h3><i class="fa-solid fa-bullseye"></i> <span data-i18n="targetsTitle">細項指標</span> (<span id="modal-target-count">0</span>)</h3>
+            <span class="targets-hint"><i class="fa-solid fa-magnifying-glass-plus"></i> <span data-i18n="clickToZoom">點擊任一圖卡可展開大圖</span></span>
+          </div>
+          <div id="modal-targets-grid" class="targets-grid">
+            <!-- JS 動態填入細項指標 -->
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="modal-prev-btn" class="nav-goal-btn">
+          <i class="fa-solid fa-chevron-left"></i> <span data-i18n="prevGoal">上一個目標</span>
+        </button>
+        <button id="modal-next-btn" class="nav-goal-btn">
+          <span data-i18n="nextGoal">下一個目標</span> <i class="fa-solid fa-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 總覽清單 Modal -->
+  <div id="overview-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="overview-title">
+    <div class="modal-card overview-card">
+      <div class="modal-header overview-header">
+        <div class="modal-header-left">
+          <div class="overview-icon-box">
+            <i class="fa-solid fa-table-cells-large"></i>
+          </div>
+          <div>
+            <h2 id="overview-title" data-i18n="overviewTitle">17 項永續發展目標總覽</h2>
+            <p class="modal-subtitle" data-i18n="overviewSubtitle">點擊任意目標卡片即可檢視完整細項指標</p>
+          </div>
+        </div>
+        <button id="overview-close-btn" class="modal-close-btn" aria-label="關閉總覽">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="overview-grid" class="overview-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 單張圖片展開燈箱 (Lightbox) -->
+  <div id="image-lightbox" class="lightbox-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="lightbox-title">
+    <div class="lightbox-card">
+      <button id="lightbox-close-btn" class="modal-close-btn lightbox-close" aria-label="關閉大圖預覽">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <button id="lightbox-prev-btn" class="lightbox-nav-btn lightbox-prev" aria-label="上一張圖片">
+        <i class="fa-solid fa-chevron-left"></i>
+      </button>
+
+      <div class="lightbox-content">
+        <div class="lightbox-img-wrap">
+          <img id="lightbox-img" src="" alt="" />
+        </div>
+        <div class="lightbox-info">
+          <span id="lightbox-badge" class="lightbox-badge"></span>
+          <h3 id="lightbox-title"></h3>
+          <p id="lightbox-desc"></p>
+          <div class="lightbox-actions">
+            <button type="button" id="lightbox-copy-btn" class="copy-action-btn">
+              <i class="fa-regular fa-copy"></i> <span data-i18n="copySingle">複製指標內容</span>
+            </button>
+          </div>
+          <div id="lightbox-counter" class="lightbox-counter"></div>
+        </div>
+      </div>
+
+      <button id="lightbox-next-btn" class="lightbox-nav-btn lightbox-next" aria-label="下一張圖片">
+        <i class="fa-solid fa-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- 複製成功提示 Toast -->
+  <div id="copy-toast" class="copy-toast hidden" role="status" aria-live="polite">
+    <i class="fa-solid fa-circle-check"></i>
+    <span id="copy-toast-text">已複製到剪貼簿</span>
+  </div>
+
+  <!-- 頁尾 (FB 粉絲專頁 + Copyright) -->
+  <footer class="site-footer">
+    <div class="footer-social">
+      <a href="https://www.facebook.com/happyliyuchilltiger/" target="_blank" rel="noopener noreferrer" class="fb-link">
+        <i class="fa-brands fa-facebook"></i>
+        <span>快樂鯉魚秋老虎</span>
+      </a>
+    </div>
+    <div class="footer-copyright">
+      Copyright © Liyuchiutiger Gongminshen
+    </div>
+  </footer>
+
+  <!-- 左下角可拖曳霓虹發光抖動吉祥物 -->
+  <div id="mascot-widget" class="mascot-widget" title="拖曳我可以移動到任何地方！" role="button" tabindex="0" aria-label="吉祥物，可拖曳移動">
+    <img src="image/LiyuChillGuy.svg" alt="LiyuChillGuy 吉祥物" draggable="false" />
+    <span class="mascot-tooltip">
+      <i class="fa-solid fa-up-down-left-right"></i> 拖曳移動
+    </span>
+  </div>
+
+  <script src="js/sdgs-data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
